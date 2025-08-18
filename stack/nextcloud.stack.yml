@@ -56,6 +56,8 @@ services:
     deploy:
       mode: replicated
       replicas: 1                      # POC: 1 réplica (persistance locale)
+      update_config:
+        order: start-first
       restart_policy:
         condition: any # On redémarre si le service plante
         delay: 5s
