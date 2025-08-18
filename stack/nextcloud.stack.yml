@@ -54,6 +54,12 @@ services:
       timeout: 3s
       retries: 10
     deploy:
+      mode: replicated
+      replicas: 1                      # POC: 1 réplica (persistance locale)
+      restart_policy:
+        condition: any # On redémarre si le service plante
+        delay: 5s
+        max_attempts: 0
       placement:
         constraints:
           - node.labels.apps == true
