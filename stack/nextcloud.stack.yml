@@ -63,8 +63,6 @@ services:
       placement:
         constraints:
           - node.labels.apps == true
-      restart_policy:
-        condition: on-failure
 
   nextcloud:
     image: nextcloud:29-apache
