@@ -9,7 +9,7 @@ volumes:
 
 configs:
   php_ini:
-    file: ./services/php/php.ini
+    file: ../services/php/php.ini
   # Si tu utilises le custom.cnf :
   # mariadb_cnf:
   #   file: ./services/mariadb/custom.cnf
