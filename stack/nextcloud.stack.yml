@@ -4,10 +4,8 @@ networks:
     attachable: true
 
 volumes:
-  nc_nextcloud_data:
-    external: 
-  nc_db_data:
-    external: 
+  nc_nextcloud_data: {}
+  nc_db_data: {}
 
 configs:
   php_ini:
