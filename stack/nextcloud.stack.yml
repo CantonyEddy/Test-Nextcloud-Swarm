@@ -5,9 +5,9 @@ networks:
 
 volumes:
   nc_nextcloud_data:
-    external: true
+    external: 
   nc_db_data:
-    external: true
+    external: 
 
 configs:
   php_ini:
