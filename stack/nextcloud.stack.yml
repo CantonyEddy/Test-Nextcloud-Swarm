@@ -13,9 +13,9 @@ configs:
 
 secrets:
   nc_db_password:
-    file: ../secrets/nc_db_password.txt                                             # Secret for database password
+    file: ../secrets/db_password.txt                                             # Secret for database password
   nc_db_root_password:
-    file: ../secrets/nc_db_root_password.txt                                        # Secret for database root password
+    file: ../secrets/db_root_password.txt                                        # Secret for database root password
 
 services:
   
