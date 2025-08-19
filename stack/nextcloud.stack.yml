@@ -58,7 +58,7 @@ services:
         order: start-first                                                          # Start new instance before stopping old one
       restart_policy:
         condition: any                                                              # Restart on any failure
-        deley: 5s                                                                   # Delay before restarting
+#        deley: 5s                                                                   # Delay before restarting
         max_attempts: 0                                                             # No limit on restart attempts
       placement:
         constraints:
