@@ -1,107 +1,107 @@
 networks:
   nc_net:
-    driver: overlay                                 # Overlay network for Nextcloud
-    attachable: true                                # Allows standalone containers to connect to this network
+    driver: overlay                                                                 # Overlay network for Nextcloud
+    attachable: true                                                                # Allows standalone containers to connect to this network
 
 volumes:
-  nc_nextcloud_data: {}                             # Volume for Nextcloud data
-  nc_db_data: {}                                    # Volume for database data
+  nc_nextcloud_data: {}                                                             # Volume for Nextcloud data
+  nc_db_data: {}                                                                    # Volume for database data
 
 configs:
   php_ini:
-    file: ../services/php/php.ini                   # Configuration file for PHP
+    file: ../services/php/php.ini                                                   # Configuration file for PHP
 
 secrets:
   nc_db_password:
-    file: ../secrets/nc_db_password.txt             # Secret for database password
+    file: ../secrets/nc_db_password.txt                                             # Secret for database password
   nc_db_root_password:
-    file: ../secrets/nc_db_root_password.txt        # Secret for database root password
+    file: ../secrets/nc_db_root_password.txt                                        # Secret for database root password
 
 services:
   
   nc_redis:
-    image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
-    networks: [nc_net]
+    image: redis:7-alpine                                                           # Redis service for caching
+    command: ["redis-server", "--appendonly", "yes"]                                # Start Redis with append-only file persistence
+    networks: [nc_net]                                                              # Connect to the Nextcloud network
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: replicated                                                              # Replicated service for Redis
+      replicas: 1                                                                   # Single instance of Redis
       restart_policy:
-        condition: any
+        condition: any                                                              # Restart on any failure
       placement:
         constraints:
-          - node.labels.apps == true
+          - node.labels.apps == true                                                # Run on nodes labeled for apps
 
   nc_mariadb:
-    image: mariadb:11
+    image: mariadb:11                                                               # MariaDB service for Nextcloud
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD_FILE: run/secrets/nc_db_password
-      MYSQL_ROOT_PASSWORD_FILE: run/secrets/nc_db_root_password
+      MYSQL_DATABASE: ${MYSQL_DATABASE}                                             # Database name for Nextcloud
+      MYSQL_USER: ${MYSQL_USER}                                                     # Database user for Nextcloud
+      MYSQL_PASSWORD_FILE: run/secrets/nc_db_password                               # File containing the database password
+      MYSQL_ROOT_PASSWORD_FILE: run/secrets/nc_db_root_password                     # File containing the root password for MariaDB
     secrets:
-      - nc_db_password
-      - nc_db_root_password
+      - nc_db_password                                                              # Secret for database password
+      - nc_db_root_password                                                         # Secret for root password
     volumes:
-      - nc_db_data:/var/lib/mysql
-    networks: [nc_net]
+      - nc_db_data:/var/lib/mysql                                                   # Volume for MariaDB data
+    networks: [nc_net]                                                              # Connect to the Nextcloud network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 30s
-      timeout: 3s
-      retries: 10
-      start_period: 30s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]                        # Health check for MariaDB
+      interval: 30s                                                                 # Check every 30 seconds
+      timeout: 3s                                                                   # Timeout after 3 seconds
+      retries: 10                                                                   # Retry 10 times before marking as unhealthy
+      start_period: 30s                                                             # Wait 30 seconds before starting health checks
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: replicated                                                              # Replicated service for MariaDB
+      replicas: 1                                                                   # Single instance of MariaDB
       update_config:
-        order: start-first
+        order: start-first                                                          # Start new instance before stopping old one
       restart_policy:
-        condition: any
-        deley: 5s
-        max_attempts: 0
+        condition: any                                                              # Restart on any failure
+        deley: 5s                                                                   # Delay before restarting
+        max_attempts: 0                                                             # No limit on restart attempts
       placement:
         constraints:
-          - node.labels.apps == true
+          - node.labels.apps == true                                                # Run on nodes labeled for apps
 
   nextcloud:
-    image: nextcloud:29-apache
+    image: nextcloud:29-apache                                                      # Nextcloud service with Apache
     environment:
-      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
-      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}                                 # Admin username for Nextcloud
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}                         # Admin password for Nextcloud
 
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD_FILE: /run/secrets/nc_db_password
-      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}                                             # Database name for Nextcloud
+      MYSQL_USER: ${MYSQL_USER}                                                     # Database user for Nextcloud
+      MYSQL_PASSWORD_FILE: /run/secrets/nc_db_password                              # File containing the database password
+      MYSQL_HOST: ${MYSQL_HOST}                                                     # Hostname of the database server
 
-      REDIS_HOST: nc-redis
-      REDIS_HOST_PORT: 6379
+      REDIS_HOST: nc-redis                                                          # Hostname of the Redis server
+      REDIS_HOST_PORT: 6379                                                         # Port for Redis server
 
-      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
-      PHP_MEMORY_LIMIT: 512M
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}                       # Trusted domains for Nextcloud
+      PHP_MEMORY_LIMIT: 512M                                                        # Memory limit for PHP
     configs:
-      - source: php_ini
-        target: /usr/local/etc/php/conf.d/zzz-custom.ini
+      - source: php_ini                                                             # Use custom PHP configuration
+        target: /usr/local/etc/php/conf.d/zzz-custom.ini                            # Target path for the PHP configuration file
     secrets:
-      - nc_db_password
+      - nc_db_password                                                              # Secret for database password
     volumes:
-      - nc_nextcloud_data:/var/www/html
-    networks: [nc_net]
+      - nc_nextcloud_data:/var/www/html                                             # Volume for Nextcloud data
+    networks: [nc_net]                                                              # Connect to the Nextcloud network
     ports:
-      - "${PUBLISHED_PORT}:80"
+      - "${PUBLISHED_PORT}:80"                                                      # Expose port 80 for Nextcloud
     healthcheck:
-      test: ["CMD", "bash", "-c", "curl -fs http://localhost/status.php || exit 1"]
-      interval: 20s
-      timeout: 5s
-      retries: 15
+      test: ["CMD", "bash", "-c", "curl -fs http://localhost/status.php || exit 1"] # Health check for Nextcloud
+      interval: 20s                                                                 # Check every 20 seconds
+      timeout: 5s                                                                   # Timeout after 5 seconds
+      retries: 15                                                                   # Retry 15 times before marking as unhealthy
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: replicated                                                              # Replicated service for Nextcloud
+      replicas: 1                                                                   # Single instance of Nextcloud
       update_config:
-        order: start-first
+        order: start-first                                                          # Start new instance before stopping old one
       restart_policy:
-        condition: on-failure
+        condition: on-failure                                                       # Restart on failure
       placement:
         constraints:
-          - node.labels.apps == true
+          - node.labels.apps == true                                                # Run on nodes labeled for apps
