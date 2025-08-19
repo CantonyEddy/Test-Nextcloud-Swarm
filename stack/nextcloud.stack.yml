@@ -1,66 +1,64 @@
 networks:
   nc_net:
-    driver: overlay
-    attachable: true
+    driver: overlay                                 # Overlay network for Nextcloud
+    attachable: true                                # Allows standalone containers to connect to this network
 
 volumes:
-  nc_nextcloud_data: {}
-  nc_db_data: {}
+  nc_nextcloud_data: {}                             # Volume for Nextcloud data
+  nc_db_data: {}                                    # Volume for database data
 
 configs:
   php_ini:
-    file: ../services/php/php.ini
-  # Si tu utilises le custom.cnf :
-  # mariadb_cnf:
-  #   file: ./services/mariadb/custom.cnf
+    file: ../services/php/php.ini                   # Configuration file for PHP
 
 secrets:
-  nc_db_root_password:
-    external: true
   nc_db_password:
-    external: true
+    file: ../secrets/nc_db_password.txt             # Secret for database password
+  nc_db_root_password:
+    file: ../secrets/nc_db_root_password.txt        # Secret for database root password
 
 services:
-  nc-redis:
+  
+  nc_redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
     networks: [nc_net]
     deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
       placement:
         constraints:
           - node.labels.apps == true
-      restart_policy:
-        condition: on-failure
 
-  nc-mariadb:
+  nc_mariadb:
     image: mariadb:11
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
-      # Les 2 variables ci-dessous sont lues depuis secrets
-      # et exposées par Docker au runtime via fichiers (/run/secrets/*)
-      MYSQL_PASSWORD_FILE: /run/secrets/nc_db_password
-      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/nc_db_root_password
+      MYSQL_PASSWORD_FILE: run/secrets/nc_db_password
+      MYSQL_ROOT_PASSWORD_FILE: run/secrets/nc_db_root_password
     secrets:
       - nc_db_password
       - nc_db_root_password
     volumes:
       - nc_db_data:/var/lib/mysql
-      # - mariadb_cnf:/etc/mysql/conf.d/custom.cnf  # si tu actives la config
     networks: [nc_net]
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
+      interval: 30s
       timeout: 3s
       retries: 10
+      start_period: 30s
     deploy:
       mode: replicated
-      replicas: 1                      # POC: 1 réplica (persistance locale)
+      replicas: 1
       update_config:
         order: start-first
       restart_policy:
-        condition: any # On redémarre si le service plante
-        delay: 5s
+        condition: any
+        deley: 5s
         max_attempts: 0
       placement:
         constraints:
@@ -68,26 +66,19 @@ services:
 
   nextcloud:
     image: nextcloud:29-apache
-    # Pas de depends_on en Swarm: on compte sur healthcheck + restart_policy.
     environment:
-      # Admin créé au premier boot (si dossier vide)
       NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
 
-      # Connexion DB
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD_FILE: /run/secrets/nc_db_password
-      MYSQL_HOST: nc-mariadb
+      MYSQL_HOST: ${MYSQL_HOST}
 
-      # Redis (locking/transactions)
       REDIS_HOST: nc-redis
       REDIS_HOST_PORT: 6379
 
-      # Domaines de confiance (séparés par espace)
       NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAINS}
-
-      # PHP tuning additionnel possible via env (facultatif)
       PHP_MEMORY_LIMIT: 512M
     configs:
       - source: php_ini
@@ -105,7 +96,8 @@ services:
       timeout: 5s
       retries: 15
     deploy:
-      replicas: 1                      # POC: 1 réplica (persistance locale)
+      mode: replicated
+      replicas: 1
       update_config:
         order: start-first
       restart_policy:
